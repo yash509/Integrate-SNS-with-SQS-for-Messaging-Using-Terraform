@@ -1,0 +1,154 @@
+Ques:-
+
+The Nautilus DevOps team is implementing a messaging system in AWS. They want to create an SNS topic and an SQS queue. The team needs to subscribe the SQS queue to the SNS topic so that any messages sent to the SNS topic will be delivered to the SQS queue.
+
+1. Create an SNS topic named xfusion-sns-topic.
+
+2. Create an SQS queue named xfusion-sqs-queue.
+
+3. Subscribe the SQS queue to the SNS topic.
+
+4. Use the main.tf file (do not create a separate .tf file) to provision the SNS topic and SQS queue.
+
+5. Create the outputs.tf file, and use the following:
+
+	-> The ARN of the SNS topic using the output variable kke_sns_topic_arn.
+	-> The URL of the SQS queue using the output variable kke_sqs_queue_url.
+	
+	
+	
+	
+Soln:-
+
+Step 1:- Navigate to your Terraform working directory
+
+cd /home/bob/terraform
+
+
+
+Step 2:- Verify the provider.tf file with the following content:
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style = true
+
+endpoints {
+    ec2            = "http://aws:4566"
+    apigateway     = "http://aws:4566"
+    cloudformation = "http://aws:4566"
+    cloudwatch     = "http://aws:4566"
+    dynamodb       = "http://aws:4566"
+    es             = "http://aws:4566"
+    firehose       = "http://aws:4566"
+    iam            = "http://aws:4566"
+    kinesis        = "http://aws:4566"
+    lambda         = "http://aws:4566"
+    route53        = "http://aws:4566"
+    redshift       = "http://aws:4566"
+    s3             = "http://aws:4566"
+    secretsmanager = "http://aws:4566"
+    ses            = "http://aws:4566"
+    sns            = "http://aws:4566"
+    sqs            = "http://aws:4566"
+    ssm            = "http://aws:4566"
+    stepfunctions  = "http://aws:4566"
+    sts            = "http://aws:4566"
+    rds            = "http://aws:4566"
+  }
+}
+
+
+
+Step 3: Create the "main.tf" file
+
+# Create SNS Topic
+resource "aws_sns_topic" "xfusion_sns_topic" {
+  name = "xfusion-sns-topic"
+}
+
+# Create SQS Queue
+resource "aws_sqs_queue" "xfusion_sqs_queue" {
+  name = "xfusion-sqs-queue"
+}
+
+# Subscribe SQS Queue to SNS Topic
+resource "aws_sns_topic_subscription" "sqs_subscription" {
+  topic_arn = aws_sns_topic.xfusion_sns_topic.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.xfusion_sqs_queue.arn
+}
+
+# Allow SNS to send messages to SQS
+resource "aws_sqs_queue_policy" "sqs_policy" {
+  queue_url = aws_sqs_queue.xfusion_sqs_queue.id
+
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Id": "sqspolicy",
+  "Statement": [
+    {
+      "Sid": "Allow-SNS-SendMessage",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "sqs:SendMessage",
+      "Resource": "${aws_sqs_queue.xfusion_sqs_queue.arn}",
+      "Condition": {
+        "ArnEquals": {
+          "aws:SourceArn": "${aws_sns_topic.xfusion_sns_topic.arn}"
+        }
+      }
+    }
+  ]
+}
+POLICY
+}
+
+
+
+Step 4: Create the "output.tf" file
+
+output "kke_sns_topic_arn" {
+  description = "The ARN of the SNS topic"
+  value       = aws_sns_topic.xfusion_sns_topic.arn
+}
+
+output "kke_sqs_queue_url" {
+  description = "The URL of the SQS queue"
+  value       = aws_sqs_queue.xfusion_sqs_queue.id
+}
+
+
+
+Step 5: Initialize Terraform in the directory
+	
+terraform init
+
+
+
+Step 6: Check the Terraform Directory for the correct syntax
+
+terraform validate
+
+
+
+Step 7:- Plan the configuration in the directory
+
+terraform plan
+
+
+
+Step 8:- Apply the configuration to create the resources
+
+terraform apply --auto-approve
